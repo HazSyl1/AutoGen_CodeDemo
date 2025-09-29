@@ -1,0 +1,121 @@
+# Refactored, Unicode-safe automated input validator for DEM-1
+import re
+import logging
+from datetime import datetime
+
+logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+
+def validate_name(name):
+    if not name:
+        return False, "Field is required"
+    if len(name) < 2 or len(name) > 30:
+        return False, "Name must be 2-30 characters"
+    return True, ""
+
+def validate_email(email):
+    if not email:
+        return False, "Field is required"
+    pattern = r"^[A-Za-z0-9\.\+\-_]+@[A-Za-z0-9\-]+\.[A-Za-z]{2,}$"
+    if not re.fullmatch(pattern, email):
+        return False, "Enter valid email (e.g. user@domain.com)"
+    return True, ""
+
+def validate_phone(phone):
+    if not phone:
+        return False, "Field is required"
+    pattern = r"^(\(\d{3}\)\s?|\d{3}[- ]?)\d{3}[- ]?\d{4}$"
+    if not re.fullmatch(pattern, phone):
+        return False, "Enter valid phone (e.g. 123-456-7890)"
+    return True, ""
+
+def validate_dob(dob):
+    if not dob:
+        return False, "Field is required"
+    try:
+        datetime.strptime(dob, "%Y-%m-%d")
+        return True, ""
+    except ValueError:
+        return False, 'Enter valid date (YYYY-MM-DD)'
+
+def validate_age(age):
+    if not age:
+        return False, "Field is required"
+    if not str(age).isdigit():
+        return False, "Age must be a number between 1 and 120"
+    num = int(age)
+    if num < 1 or num > 120:
+        return False, "Age must be a number between 1 and 120"
+    return True, ""
+
+def run_all_validations(data):
+    validations = [
+        ("Name", validate_name, data.get("Name")),
+        ("Email", validate_email, data.get("Email")),
+        ("Phone", validate_phone, data.get("Phone")),
+        ("Date of Birth", validate_dob, data.get("Date of Birth")),
+        ("Age", validate_age, data.get("Age")),
+    ]
+    results = []
+    all_valid = True
+    for field, fn, value in validations:
+        valid, err = fn(value)
+        results.append((field, value, valid, err))
+        if not valid:
+            all_valid = False
+    return all_valid, results
+
+def print_validation_summary(results):
+    # Use ASCII characters for check and cross to avoid UnicodeEncodeError
+    for field, value, valid, err in results:
+        if valid:
+            print(f"{field}: {value}  [OK] Valid")
+        else:
+            print(f"{field}: {value}  [X] Error: {err}")
+            # Example guidance
+            if field == "Email":
+                print("    Example: user@domain.com")
+            elif field == "Phone":
+                print("    Example: 123-456-7890")
+            elif field == "Date of Birth":
+                print("    Example: YYYY-MM-DD")
+            elif field == "Age":
+                print("    Example: 25")
+            elif field == "Name":
+                print("    Example: John Doe")
+
+def main():
+    # Test cases:
+    test_cases = [
+        {
+            "Name": "",
+            "Email": "bad-email",
+            "Phone": "123",
+            "Date of Birth": "1999-02-30",
+            "Age": "0"
+        },
+        {
+            "Name": "A",
+            "Email": "user@domain.com",
+            "Phone": "(123)456-7890",
+            "Date of Birth": "2001-05-15",
+            "Age": "abc"
+        },
+        {
+            "Name": "John Doe",
+            "Email": "john@example.com",
+            "Phone": "123-456-7890",
+            "Date of Birth": "1990-12-31",
+            "Age": "35"
+        }
+    ]
+    for idx, data in enumerate(test_cases, 1):
+        print("\n--- Test Case", idx, "---")
+        valid, results = run_all_validations(data)
+        print_validation_summary(results)
+        if valid:
+            print("[✔] All fields valid, ready for submission.\n")
+        else:
+            print("[X] Submission blocked. Please fix errors above.\n")
+
+if __name__ == "__main__":
+    main()
